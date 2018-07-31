@@ -11,23 +11,11 @@ class Player:
         # initializing movement variables
         self.speed = speed
         self.direction = np.array([1, 0])
+        self.prev_direction = np.array([0, 0])
 
-    # TODO need a better way to prevent suicide
-    def move_right(self):
-        if self.direction[0] != -1:
-            self.direction = np.array([1, 0])
-
-    def move_left(self):
-        if self.direction[0] != 1:
-            self.direction = np.array([-1, 0])
-
-    def move_up(self):
-        if self.direction[1] != 1:
-            self.direction = np.array([0, -1])
-
-    def move_down(self):
-        if self.direction[1] != -1:
-            self.direction = np.array([0, 1])
+    def change_direction(self, direction):
+        if not np.array_equal(-1*direction, self.direction):
+            self.direction = direction
 
     def move(self, elongate):
         # if elongation is necessary
