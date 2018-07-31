@@ -3,6 +3,7 @@ from pygame import *
 from player import Player
 import random
 import numpy as np
+import queue
 
 win_width = 800
 win_height = 600
@@ -17,7 +18,7 @@ DOWN = np.array([0, 1])
 moves = {K_UP: UP, K_DOWN: DOWN, K_RIGHT: RIGHT, K_LEFT: LEFT}
 
 class Game:
-    
+
     def __init__(self, fps=10):
         self._running = False
         self._display_surf = None
@@ -34,6 +35,7 @@ class Game:
         self._running = True
         self._player_surf = pygame.image.load("player.png").convert()
         self._food_surf = pygame.image.load("food.png").convert()
+        self.buffer = queue.Queue(maxsize=2)
 
     def on_render(self):
         self._display_surf.fill((0, 0, 0))
@@ -81,13 +83,19 @@ class Game:
     def run(self):
         self._running = True
         while self._running:
-            key_events = pygame.event.get(KEYDOWN)  # TODO implement a Queue to keep a buffer of moves?
-            if len(key_events) <= 1:
-                for ev in key_events:
-                    if ev.key in moves:
-                        self.player.change_direction(moves[ev.key])
-                    elif ev.key is K_ESCAPE:  # TODO fix exit method
-                        self._running = False
+            key_events = pygame.event.get(KEYDOWN)
+            for ev in key_events:
+                if ev.key in moves:
+                    try:
+                        self.buffer.put(moves[ev.key], block=False)
+                    except queue.Full:
+                        pass
+                    # self.player.change_direction(moves[ev.key])
+                elif ev.key is K_ESCAPE:  # TODO fix exit method
+                    self._running = False
+
+            if not self.buffer.empty():
+                self.player.change_direction(self.buffer.get(block=False))
 
             eat = self.check_eaten()
             self.player.move(eat)
