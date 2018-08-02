@@ -4,6 +4,7 @@ from player import Player
 import random
 import numpy as np
 import queue
+import time
 
 win_width = 800
 win_height = 600
@@ -17,6 +18,7 @@ DOWN = np.array([0, 1])
 
 moves = {K_UP: UP, K_DOWN: DOWN, K_RIGHT: RIGHT, K_LEFT: LEFT}
 
+
 class Game:
 
     def __init__(self, fps=10):
@@ -26,18 +28,19 @@ class Game:
         self._food_surf = None
         self.fps = fps
         self.player = Player()
-        self.food = (20*random.randint(low_bound[0]/20, up_bound[1]/20-1),
+        self.food = (20*random.randint(low_bound[0]/20, up_bound[1]/20-1),  # initially spawning food
                      20*random.randint(low_bound[1]/20, up_bound[1]/20-1))
         self.score = 0
+
         pygame.init()
         self.clock = pygame.time.Clock()
         self._display_surf = pygame.display.set_mode((win_width, win_height), pygame.HWSURFACE)
         self._running = True
         self._player_surf = pygame.image.load("player.png").convert()
         self._food_surf = pygame.image.load("food.png").convert()
-        self.buffer = queue.Queue(maxsize=2)
+        self.buffer = queue.PriorityQueue(maxsize=2)
 
-    def on_render(self):
+    def render(self):
         self._display_surf.fill((0, 0, 0))
         rect = pygame.Rect(low_bound[0], low_bound[1],
                            up_bound[0]-low_bound[0], up_bound[1]-low_bound[1])
@@ -80,31 +83,42 @@ class Game:
         else:
             return False
 
+    def valid_move(self, move):
+        if np.array_equal(-1*move, self.player.direction) or np.array_equal(move, self.player.direction):
+            return 1
+        else:
+            return 0
+
     def run(self):
         self._running = True
         while self._running:
             key_events = pygame.event.get(KEYDOWN)
             for ev in key_events:
-                if ev.key in moves:
+                if ev.key in moves and not np.array_equal(moves[ev.key], self.player.direction):
                     try:
-                        self.buffer.put(moves[ev.key], block=False)
+                        # store moves in a queue
+                        self.buffer.put((self.valid_move(moves[ev.key]), moves[ev.key]), block=False)
                     except queue.Full:
-                        pass
-                    # self.player.change_direction(moves[ev.key])
-                elif ev.key is K_ESCAPE:  # TODO fix exit method
+                        print('full')
+                        pass  # just to deal with if the queue is full
+
+                if ev.key is K_ESCAPE:  # TODO fix exit method
                     self._running = False
 
-            if not self.buffer.empty():
-                self.player.change_direction(self.buffer.get(block=False))
+            print(self.buffer.qsize())
+            if not self.buffer.empty():  # take the moves one at a time, dequeuing one per frame
+                x = self.buffer.get(block=False)[1]
+                print('Moving', x)
+                self.player.change_direction(x)
 
             eat = self.check_eaten()
             self.player.move(eat)
             self._running = not self.check_death()
 
-            self.on_render()
+            self.render()
             self.clock.tick(self.fps)
 
 
 if __name__ == "__main__":
-    game = Game()
+    game = Game(fps=2)
     game.run()

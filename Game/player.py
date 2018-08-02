@@ -11,7 +11,6 @@ class Player:
         # initializing movement variables
         self.speed = speed
         self.direction = np.array([1, 0])
-        self.prev_direction = np.array([0, 0])
 
     def change_direction(self, direction):
         if not np.array_equal(-1*direction, self.direction):
