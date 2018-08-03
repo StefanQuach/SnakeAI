@@ -1,10 +1,10 @@
 import pygame
+import sys as system
 from pygame import *
 from player import Player
 import random
 import numpy as np
 import queue
-import time
 
 win_width = 800
 win_height = 600
@@ -20,8 +20,15 @@ moves = {K_UP: UP, K_DOWN: DOWN, K_RIGHT: RIGHT, K_LEFT: LEFT}
 
 
 class Game:
-
-    def __init__(self, fps=10):
+    """
+    Game object that runs the entirety of Snake, including Food placement.
+    TODO: make a start screen and death screen
+    """
+    def __init__(self, fps=10, caption='Snake'):
+        """
+        Constructor
+        :param fps: in-game clock tick rate (in ticks/sec)
+        """
         self._running = False
         self._display_surf = None
         self._player_surf = None
@@ -39,8 +46,14 @@ class Game:
         self._player_surf = pygame.image.load("player.png").convert()
         self._food_surf = pygame.image.load("food.png").convert()
         self.buffer = queue.PriorityQueue(maxsize=2)
+        self.caption = caption
 
     def render(self):
+        """
+        Helper method to store all the pygame rendering objects/processes
+        :return:
+        """
+        pygame.display.set_caption(self.caption)
         self._display_surf.fill((0, 0, 0))
         rect = pygame.Rect(low_bound[0], low_bound[1],
                            up_bound[0]-low_bound[0], up_bound[1]-low_bound[1])
@@ -55,6 +68,10 @@ class Game:
         pygame.display.update()
 
     def respawn_food(self):
+        """
+        Helper method to respawn the food in a valid place
+        :return:
+        """
         valid = False
         while not valid:
             x = 20*random.randint(low_bound[0]/20, up_bound[0]/20-1)
@@ -63,6 +80,10 @@ class Game:
         self.food = (x, y)
 
     def check_eaten(self):
+        """
+        Checks if player has eaten the food, respawning food if the player has
+        :return: True if food is eaten, else False
+        """
         if (self.food[0] == self.player.x[0]) and (self.food[1] == self.player.y[0]):
             self.respawn_food()
             self.score += 1
@@ -71,6 +92,10 @@ class Game:
             return False
 
     def check_death(self):
+        """
+        Checks if the player has died
+        :return: True if the player has satisfied any death condition, else False
+        """
         if (self.player.x[0], self.player.y[0]) in list(zip(self.player.x[1:], self.player.y[1:])):
             print('death by self')
             return True
@@ -84,10 +109,15 @@ class Game:
             return False
 
     def valid_move(self, move):
+        """
+        Checks if the inputted move will actually do something
+        :param move: input move
+        :return: True if valid, False otherwise
+        """
         if np.array_equal(-1*move, self.player.direction) or np.array_equal(move, self.player.direction):
-            return 1
+            return True
         else:
-            return 0
+            return False
 
     def run(self):
         self._running = True
@@ -96,19 +126,21 @@ class Game:
             for ev in key_events:
                 if ev.key in moves and not np.array_equal(moves[ev.key], self.player.direction):
                     try:
-                        # store moves in a queue
+                        # store moves in a priority queue prioritizing the currently valid moves
                         self.buffer.put((self.valid_move(moves[ev.key]), moves[ev.key]), block=False)
                     except queue.Full:
                         print('full')
                         pass  # just to deal with if the queue is full
 
-                if ev.key is K_ESCAPE:  # TODO fix exit method
-                    self._running = False
+                if ev.key is K_ESCAPE:
+                    # exit the game if esc is pressed
+                    pygame.quit()
+                    system.exit()
 
-            print(self.buffer.qsize())
+            # print(self.buffer.qsize())
             if not self.buffer.empty():  # take the moves one at a time, dequeuing one per frame
                 x = self.buffer.get(block=False)[1]
-                print('Moving', x)
+                # print('Moving', x)
                 self.player.change_direction(x)
 
             eat = self.check_eaten()
@@ -118,7 +150,10 @@ class Game:
             self.render()
             self.clock.tick(self.fps)
 
+        pygame.quit()
+        system.exit()
+
 
 if __name__ == "__main__":
-    game = Game(fps=2)
+    game = Game(fps=10)
     game.run()
