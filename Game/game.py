@@ -1,10 +1,11 @@
 import pygame
 import sys as system
 from pygame import *
-from player import Player
+from Game.player import Player
 import random
 import numpy as np
 import queue
+from itertools import count
 
 win_width = 800
 win_height = 600
@@ -17,6 +18,7 @@ UP = np.array([0, -1])
 DOWN = np.array([0, 1])
 
 moves = {K_UP: UP, K_DOWN: DOWN, K_RIGHT: RIGHT, K_LEFT: LEFT}
+tiebreaker = count()
 
 
 class Game:
@@ -115,22 +117,21 @@ class Game:
         :return: True if valid, False otherwise
         """
         if np.array_equal(-1*move, self.player.direction) or np.array_equal(move, self.player.direction):
-            return True
+            return 1
         else:
-            return False
+            return 0
 
     def run(self):
         self._running = True
         while self._running:
             key_events = pygame.event.get(KEYDOWN)
+            # print(len(key_events))
             for ev in key_events:
-                if ev.key in moves and not np.array_equal(moves[ev.key], self.player.direction):
-                    try:
-                        # store moves in a priority queue prioritizing the currently valid moves
-                        self.buffer.put((self.valid_move(moves[ev.key]), moves[ev.key]), block=False)
-                    except queue.Full:
+                if ev.key in moves:
+                    if not self.buffer.full():
+                        self.buffer.put((self.valid_move(moves[ev.key]), next(tiebreaker), moves[ev.key]), block=False)
+                    else:
                         print('full')
-                        pass  # just to deal with if the queue is full
 
                 if ev.key is K_ESCAPE:
                     # exit the game if esc is pressed
@@ -139,7 +140,7 @@ class Game:
 
             # print(self.buffer.qsize())
             if not self.buffer.empty():  # take the moves one at a time, dequeuing one per frame
-                x = self.buffer.get(block=False)[1]
+                x = self.buffer.get(block=False)[2]
                 # print('Moving', x)
                 self.player.change_direction(x)
 
