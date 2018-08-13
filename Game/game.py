@@ -6,6 +6,7 @@ import random
 import numpy as np
 import queue
 from itertools import count
+from AI.AI_Player import AIPlayer
 
 win_width = 800
 win_height = 600
@@ -26,7 +27,7 @@ class Game:
     Game object that runs the entirety of Snake, including Food placement.
     TODO: make a start screen and death screen
     """
-    def __init__(self, fps=10, caption='Snake'):
+    def __init__(self, fps=10, ai=False, caption='Snake'):
         """
         Constructor
         :param fps: in-game clock tick rate (in ticks/sec)
@@ -40,6 +41,9 @@ class Game:
         self.food = (20*random.randint(low_bound[0]/20, up_bound[1]/20-1),  # initially spawning food
                      20*random.randint(low_bound[1]/20, up_bound[1]/20-1))
         self.score = 0
+        self.ai = ai
+        if ai:
+            self.ai_player = AIPlayer(self, [5, 4], random=True)
 
         pygame.init()
         self.clock = pygame.time.Clock()
@@ -124,25 +128,29 @@ class Game:
     def run(self):
         self._running = True
         while self._running:
-            key_events = pygame.event.get(KEYDOWN)
-            # print(len(key_events))
-            for ev in key_events:
-                if ev.key in moves:
-                    if not self.buffer.full():
-                        self.buffer.put((self.valid_move(moves[ev.key]), next(tiebreaker), moves[ev.key]), block=False)
-                    else:
-                        print('full')
+            if self.ai:
+                self.player.change_direction(self.ai_player.next_move())
+            else:
+                key_events = pygame.event.get(KEYDOWN)
+                # print(len(key_events))
+                for ev in key_events:
+                    if ev.key in moves:
+                        if not self.buffer.full():
+                            self.buffer.put((self.valid_move(moves[ev.key]), next(tiebreaker),
+                                             moves[ev.key]), block=False)
+                        else:
+                            print('full')
 
-                if ev.key is K_ESCAPE:
-                    # exit the game if esc is pressed
-                    pygame.quit()
-                    system.exit()
+                    if ev.key is K_ESCAPE:
+                        # exit the game if esc is pressed
+                        pygame.quit()
+                        system.exit()
 
-            # print(self.buffer.qsize())
-            if not self.buffer.empty():  # take the moves one at a time, dequeuing one per frame
-                x = self.buffer.get(block=False)[2]
-                # print('Moving', x)
-                self.player.change_direction(x)
+                # print(self.buffer.qsize())
+                if not self.buffer.empty():  # take the moves one at a time, dequeuing one per frame
+                    x = self.buffer.get(block=False)[2]
+                    # print('Moving', x)
+                    self.player.change_direction(x)
 
             eat = self.check_eaten()
             self.player.move(eat)
@@ -156,5 +164,5 @@ class Game:
 
 
 if __name__ == "__main__":
-    game = Game(fps=10)
+    game = Game(fps=10, ai=True)
     game.run()
