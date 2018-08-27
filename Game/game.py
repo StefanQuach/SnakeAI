@@ -27,7 +27,7 @@ class Game:
     Game object that runs the entirety of Snake, including Food placement.
     TODO: make a start screen and death screen
     """
-    def __init__(self, fps=10, ai=False, caption='Snake'):
+    def __init__(self, fps=10, caption='Snake'):
         """
         Constructor
         :param fps: in-game clock tick rate (in ticks/sec)
@@ -41,9 +41,6 @@ class Game:
         self.food = (20*random.randint(low_bound[0]/20, up_bound[1]/20-1),  # initially spawning food
                      20*random.randint(low_bound[1]/20, up_bound[1]/20-1))
         self.score = 0
-        self.ai = ai
-        if ai:
-            self.ai_player = AIPlayer(self, [5, 4], random=True)
 
         pygame.init()
         self.clock = pygame.time.Clock()
@@ -125,11 +122,16 @@ class Game:
         else:
             return 0
 
-    def run(self):
+    def run(self, ai=None):
         self._running = True
         while self._running:
-            if self.ai:
-                self.player.change_direction(self.ai_player.next_move())
+            if ai is not None:
+                pygame.event.pump()
+                keys = pygame.key.get_pressed()
+                self.player.change_direction(ai.next_move())
+                if keys[K_ESCAPE]:
+                    pygame.quit()
+                    system.exit()
             else:
                 key_events = pygame.event.get(KEYDOWN)
                 # print(len(key_events))
@@ -144,7 +146,7 @@ class Game:
                     if ev.key is K_ESCAPE:
                         # exit the game if esc is pressed
                         pygame.quit()
-                        system.exit()
+                        return
 
                 # print(self.buffer.qsize())
                 if not self.buffer.empty():  # take the moves one at a time, dequeuing one per frame
@@ -160,9 +162,11 @@ class Game:
             self.clock.tick(self.fps)
 
         pygame.quit()
-        system.exit()
+        return
 
 
 if __name__ == "__main__":
-    game = Game(fps=10, ai=True)
-    game.run()
+    game = Game(fps=10)
+    ai_player = AIPlayer(game, [10, 10], random=True)
+    game.run(ai=ai_player)
+    print('finish')

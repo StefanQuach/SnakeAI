@@ -5,7 +5,7 @@ class AIPlayer:
 
     def __init__(self, game, hidden_neurons, weights=None, bias=None, random=False):
         self.game = game
-        neurons = [17, *hidden_neurons, 3]
+        neurons = [20, *hidden_neurons, 3]
         # TODO implement a check if weights and biases are correct shape
         if random:
             self.bias = [np.random.randn(y, 1) for y in neurons[1:]]
@@ -22,19 +22,21 @@ class AIPlayer:
     def next_move(self):
         # TODO maybe check diagonal direction too
         straight = self.game.player.direction
+        backwards = -1*straight
         right = np.cross(straight, np.array([0, 0, 1]))
         left = np.cross(straight, np.array([0, 0, -1]))
         diag1 = np.array([1, 1])
         diag2 = np.array([-1, 1])
         diag3 = np.array([1, -1])
         diag4 = np.array([-1, -1])
-        arr = [straight, right, left, diag1, diag2, diag3, diag4]
+        arr = [straight, backwards, right, left, diag1, diag2, diag3, diag4]
         inputs = np.matrix([*[self.food_distance(x) for x in arr],
                             *[self.self_distance(x) for x in arr],
-                            self.wall_distance(straight), self.wall_distance(right), self.wall_distance(left)]).T
+                            self.wall_distance(straight), self.wall_distance(backwards),
+                            self.wall_distance(right), self.wall_distance(left)]).T
         # print(inputs)
-        output = softmax(self.output(sigmoid(inputs)))
-        print("step:", output)
+        output = softmax(self.output(inputs/self.game.player.speed))
+        # print("step:", output)
         moves = {0: straight[0:2], 1: right[0:2], 2: left[0:2]}
 
         return moves[np.argmax(output)]
@@ -42,15 +44,9 @@ class AIPlayer:
     def food_distance(self, direction):
         direction = direction[0:2]
         curr_pos = np.array([self.game.player.x[0], self.game.player.y[0]])
-        distance = 0
-        # print(curr_pos)
-        while 80 <= curr_pos[0] <= 720 and 60 <= curr_pos[1] <= 540:
-            if np.array_equal(curr_pos, [self.game.food[0], self.game.food[1]]):
-                print('alakdshflkahsdlkfjhalkdshflakdshflkajhds')
-                return distance
-            distance += self.game.player.speed
-            curr_pos += self.game.player.speed*direction
-
+        diff = np.array([*self.game.food])-curr_pos
+        if np.array_equal(direction/np.linalg.norm(direction), diff/np.linalg.norm(diff)):
+            return np.linalg.norm(diff)
         return 0
 
     def self_distance(self, direction):
